@@ -1,0 +1,69 @@
+{
+	"name": "n8n-nodes-filesearch",
+	"version": "0.1.0",
+	"description": "n8n nodes for the Captain File Search API: index files from any storage, search collections, and react to indexing jobs.",
+	"license": "MIT",
+	"homepage": "https://docs.filesearch.dev",
+	"keywords": [
+		"n8n-community-node-package",
+		"captain",
+		"file search",
+		"rag",
+		"retrieval",
+		"document indexing"
+	],
+	"author": {
+		"name": "Captain",
+		"email": "support@runcaptain.com"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/runcaptain/n8n-nodes-filesearch.git"
+	},
+	"scripts": {
+		"build": "n8n-node build",
+		"build:watch": "tsc --watch",
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix",
+		"test": "npm run build && node --test test/*.test.js",
+		"release": "n8n-node release",
+		"prepublishOnly": "n8n-node prerelease"
+	},
+	"files": [
+		"dist",
+		"!dist/**/*.tsbuildinfo"
+	],
+	"n8n": {
+		"n8nNodesApiVersion": 1,
+		"strict": true,
+		"credentials": [
+			"dist/credentials/CaptainAwsS3Api.credentials.js",
+			"dist/credentials/CaptainAzureBlobApi.credentials.js",
+			"dist/credentials/CaptainBackblazeB2Api.credentials.js",
+			"dist/credentials/CaptainCloudflareR2Api.credentials.js",
+			"dist/credentials/CaptainDropboxApi.credentials.js",
+			"dist/credentials/CaptainFileSearchApi.credentials.js",
+			"dist/credentials/CaptainGoogleServiceAccountApi.credentials.js",
+			"dist/credentials/CaptainMicrosoft365Api.credentials.js",
+			"dist/credentials/CaptainSupabaseStorageApi.credentials.js"
+		],
+		"nodes": [
+			"dist/nodes/CaptainFileSearch/CaptainFileSearch.node.js",
+			"dist/nodes/CaptainFileSearchTrigger/CaptainFileSearchTrigger.node.js"
+		]
+	},
+	"devDependencies": {
+		"@n8n/node-cli": "0.54.4",
+		"eslint": "9.32.0",
+		"prettier": "3.6.2",
+		"release-it": "^21.1.0",
+		"typescript": "5.9.2"
+	},
+	"peerDependencies": {
+		"n8n-workflow": "*"
+	},
+	"bugs": {
+		"url": "https://github.com/runcaptain/n8n-nodes-filesearch/issues"
+	}
+}

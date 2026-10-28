@@ -1,0 +1,58 @@
+# Publishes n8n-nodes-filesearch to npm when a version tag (e.g. 0.1.0) is pushed.
+#
+# n8n requires community nodes to be published from GitHub Actions with npm
+# provenance (from 2026-05-01), and npm only issues provenance for public
+# repositories. This file runs from the public repo
+# runcaptain/n8n-nodes-filesearch, whose root is this package folder.
+#
+# Auth: the first publish uses the NPM_TOKEN repository secret (a granular
+# npm token with publish rights). Once the package exists, add this repo and
+# workflow as a Trusted Publisher on npmjs.com and delete NPM_TOKEN; the
+# release step then uses GitHub's OIDC token instead.
+
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - '*.*.*'
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Required to mint an OIDC token for npm provenance.
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          registry-url: 'https://registry.npmjs.org/'
+          cache: npm
+
+      - name: Check the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          [ "$version" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match package.json version $version"; exit 1; }
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Release
+        # Inside GitHub Actions, `npm run release` lints, builds and publishes with provenance.
+        run: |
+          [ -n "$NPM_TOKEN" ] && npm config set //registry.npmjs.org/:_authToken "$NPM_TOKEN"
+          npm run release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
