@@ -1,6 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-import { collectionLocator } from './shared';
+import { collectionLocator, metadataFilterOptions } from './shared';
 
 export const searchOperations: INodeProperties[] = [
 	{
@@ -37,6 +37,17 @@ const searchOptions: INodeProperties = {
 	default: {},
 	displayOptions: { show },
 	options: [
+		{
+			displayName: 'Advanced Filter (JSON)',
+			name: 'filter',
+			type: 'json',
+			default: '{}',
+			placeholder: 'e.g. {"department": {"$eq": "legal"}}',
+			hint: 'e.g. {"department": {"$eq": "legal"}}',
+			description:
+				"For nested conditions the builder above can't express. Combined with Metadata Filters using AND. Supports $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $and and $or.",
+		},
+		...metadataFilterOptions,
 		{
 			displayName: 'Exclude Chunk Types',
 			name: 'excludeChunkTypes',
@@ -84,16 +95,6 @@ const searchOptions: INodeProperties = {
 			typeOptions: { minValue: 1 },
 			default: 3,
 			description: 'Cap how many results one document can take, so the results cover more files',
-		},
-		{
-			displayName: 'Metadata Filter (JSON)',
-			name: 'filter',
-			type: 'json',
-			default: '{}',
-			placeholder: 'e.g. {"department": {"$eq": "legal"}}',
-			hint: 'e.g. {"department": {"$eq": "legal"}}',
-			description:
-				'Only search documents whose custom metadata match. Supports $eq, $ne, $gt, $gte, $lt, $lte, $in, $nin, $and and $or.',
 		},
 		{
 			displayName: 'Rerank',

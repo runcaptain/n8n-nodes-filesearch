@@ -25,8 +25,24 @@ import {
 	searchCollections,
 	searchDocuments,
 	searchJobs,
+	getMetadataFields,
 	searchSyncs,
 } from './GenericFunctions';
+import {
+	searchBuckets,
+	searchDriveFiles,
+	searchDriveFolders,
+	searchDropboxFiles,
+	searchDropboxFolders,
+	searchFiles,
+	searchFolders,
+	searchManifests,
+	searchMicrosoftFiles,
+	searchMicrosoftFolders,
+	searchMicrosoftUsers,
+	searchSharePointLibraries,
+	searchSharePointSites,
+} from './storage/browse';
 
 /** Credential checks that need no network call: the API validates storage access when a job starts. */
 function checkStorageCredential(
@@ -82,8 +98,12 @@ function checkStorageCredential(
 			}
 			return undefined;
 		}
-		case 'captainSupabaseStorageApi':
 		case 'captainBackblazeB2Api': {
+			// The endpoint follows from the region: https://s3.<region>.backblazeb2.com.
+			const gaps = missing(['region', 'accessKeyId', 'secretAccessKey']);
+			return gaps.length ? `Missing ${gaps.join(', ')}` : undefined;
+		}
+		case 'captainSupabaseStorageApi': {
 			const gaps = missing(['endpointUrl', 'accessKeyId', 'secretAccessKey']);
 			if (gaps.length) return `Missing ${gaps.join(', ')}`;
 			if (!/^https:\/\//.test(String(data.endpointUrl).trim()))
@@ -192,8 +212,27 @@ export class CaptainFileSearch implements INodeType {
 	};
 
 	methods = {
-		listSearch: { searchCollections, searchDocuments, searchJobs, searchSyncs },
+		listSearch: {
+			searchCollections,
+			searchDocuments,
+			searchJobs,
+			searchSyncs,
+			searchBuckets,
+			searchFolders,
+			searchFiles,
+			searchManifests,
+			searchDriveFolders,
+			searchDriveFiles,
+			searchSharePointSites,
+			searchSharePointLibraries,
+			searchMicrosoftUsers,
+			searchMicrosoftFolders,
+			searchMicrosoftFiles,
+			searchDropboxFolders,
+			searchDropboxFiles,
+		},
 		loadOptions: {
+			getMetadataFields,
 			async getCollectionNames(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const { results } = await searchCollections.call(this);
 				return results.map((r) => ({ name: r.name, value: String(r.value) }));

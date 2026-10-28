@@ -19,16 +19,18 @@ Indexing from your own storage also needs a credential for that storage. The nod
 
 | Storage | Credential | What it holds |
 | --- | --- | --- |
-| Amazon S3 | Captain File Search: Amazon S3 | An access key, or an IAM role ARN and external ID that Captain assumes |
+| Amazon S3 | Captain File Search: Amazon S3 | An access key, or an IAM role ARN and external ID that Captain assumes. Bucket, folder and file dropdowns need the access key. |
 | Google Cloud Storage, Google Drive | Captain File Search: Google Service Account | The service account JSON key. For Drive, also the Workspace user to read as. |
 | Azure Blob Storage | Captain File Search: Azure Blob Storage | Storage account name and key |
 | Cloudflare R2 | Captain File Search: Cloudflare R2 | Account ID, access key, jurisdiction |
 | Supabase Storage | Captain File Search: Supabase Storage | S3 endpoint URL, region, access key |
-| Backblaze B2 | Captain File Search: Backblaze B2 | S3 endpoint URL, region, application key |
+| Backblaze B2 | Captain File Search: Backblaze B2 | Region and application key. The endpoint follows from the region. |
 | SharePoint, OneDrive | Captain File Search: Microsoft 365 | Entra ID tenant ID, client ID and client secret |
 | Dropbox | Captain File Search: Dropbox | An access token with `files.metadata.read` and `files.content.read` |
 
 The Microsoft 365 and Dropbox credentials are checked against Microsoft and Dropbox when you save them. The storage credentials are checked for format only. File Search confirms bucket access when a job starts.
+
+The same credentials fill the node's dropdowns: buckets and containers, folders, files and manifests, Google Drive folders and files (set the Drive user in the credential), SharePoint sites, libraries, folders and files, OneDrive users, and Dropbox folders and files. Listing happens in n8n, straight from your storage. Every dropdown also has a mode where you type or paste the name, path, ID or link, for credentials that can read a location but not list it. Listing OneDrive users needs the `User.Read.All` application permission.
 
 ## Actions
 
@@ -60,7 +62,7 @@ The files are processed by File Search, not by n8n. The node starts the job and,
 
 **Parse**: Parse File turns a document or spreadsheet into structured chunks without indexing it. The input is a binary file or a URL.
 
-Collections, documents, jobs and syncs can be picked from searchable dropdowns that load from your account. The document list shows the files in the collection you picked. Every picker also takes an ID, so a workflow can pass one from an earlier step.
+Collections, documents, jobs and syncs can be picked from searchable dropdowns that load from your account. Metadata Filters builds a filter from conditions: the Field dropdown lists the metadata fields in the collection (in every chosen collection, for Search Multiple Collections), and values are matched in the type they are stored as, so `2024` finds a field stored as the number 2024. Advanced Filter (JSON) covers nested logic. YouTube caption languages are tried in the order you pick them. If the video has none of them, File Search uses the first captions it does have. The document list shows the files in the collection you picked. Every picker also takes an ID, so a workflow can pass one from an earlier step.
 
 **Simplify** is on by default for jobs, documents and syncs and returns the 10 most useful fields. Turn it off for the full response. Delete actions return `{"deleted": true}`.
 

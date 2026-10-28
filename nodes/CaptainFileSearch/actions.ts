@@ -15,6 +15,7 @@ import {
 	waitForParseJob,
 	type MultipartFile,
 } from './GenericFunctions';
+import { credentialRegion } from './storage/signing';
 
 type Result = IDataObject | IDataObject[];
 
@@ -22,12 +23,23 @@ type Result = IDataObject | IDataObject[];
 function locatorValue(this: IExecuteFunctions, name: string, i: number): string {
 	const value = String(this.getNodeParameter(name, i, '', { extractValue: true }) ?? '').trim();
 	if (!value) {
-		const label = (
-			{ documentId: 'Document', jobId: 'Job', syncId: 'Sync' } as Record<string, string>
-		)[name];
-		throw new NodeOperationError(this.getNode(), `'${label ?? name}' is empty`, {
+		const labels: Record<string, string> = {
+			documentId: 'Document',
+			jobId: 'Job',
+			syncId: 'Sync',
+			bucketName: 'Bucket',
+			bucket: 'Bucket',
+			folderPath: 'Folder',
+			filePath: 'File',
+			manifestUri: 'Manifest',
+			siteUrl: 'Site',
+			userEmail: 'User',
+			folderId: 'Folder',
+			fileId: 'File',
+		};
+		throw new NodeOperationError(this.getNode(), `'${labels[name] ?? name}' is empty`, {
 			itemIndex: i,
-			description: 'Pick one from the list, or switch to By ID and enter or map an ID',
+			description: 'Pick one from the list, or switch to the other mode and type or map a value',
 		});
 	}
 	return value;
@@ -99,7 +111,7 @@ async function storageAuth(
 		case 'captainAwsS3Api':
 			if (style === 'sync') {
 				return {
-					region: c.region || 'us-east-1',
+					region: credentialRegion(c),
 					auth:
 						c.authType === 'role'
 							? { type: 'assume_role', role_arn: c.roleArn, external_id: c.externalId }
@@ -112,11 +124,11 @@ async function storageAuth(
 			}
 			return c.authType === 'role'
 				? {
-						bucket_region: c.region || 'us-east-1',
+						bucket_region: credentialRegion(c),
 						auth: { type: 'assume_role', role_arn: c.roleArn, external_id: c.externalId },
 					}
 				: {
-						bucket_region: c.region || 'us-east-1',
+						bucket_region: credentialRegion(c),
 						aws_access_key_id: c.accessKeyId,
 						aws_secret_access_key: c.secretAccessKey,
 					};
@@ -137,8 +149,12 @@ async function storageAuth(
 		case 'captainSupabaseStorageApi':
 		case 'captainBackblazeB2Api':
 			return {
-				endpoint_url: c.endpointUrl,
-				region: c.region || 'us-east-1',
+				endpoint_url:
+					String(c.endpointUrl ?? '').trim() ||
+					(credentialName === 'captainBackblazeB2Api'
+						? `https://s3.${String(c.region)}.backblazeb2.com`
+						: ''),
+				region: credentialRegion(c),
 				access_key_id: c.accessKeyId,
 				secret_access_key: c.secretAccessKey,
 			};
@@ -187,26 +203,25 @@ async function indexFromSource(
 	};
 	if (source.kind === 'bucket') {
 		const noun = source.value === 'azure' ? 'container_name' : 'bucket_name';
-		body[noun] = (this.getNodeParameter('bucketName', i) as string).trim();
-		if (scope === 'folder')
-			body.directory_path = (this.getNodeParameter('folderPath', i) as string).trim();
+		body[noun] = locatorValue.call(this, 'bucketName', i);
+		if (scope === 'folder') body.directory_path = locatorValue.call(this, 'folderPath', i);
 		const bucket = String(body[noun]);
 		if (scope === 'file') {
-			const path = this.getNodeParameter('filePath', i);
+			const path = locatorValue.call(this, 'filePath', i);
 			body.file_uri = objectUri(source.value, bucket, body.account_name, path);
 		}
 		if (scope === 'manifest') {
-			const path = this.getNodeParameter('manifestUri', i);
+			const path = locatorValue.call(this, 'manifestUri', i);
 			body.manifest_uri = objectUri(source.value, bucket, body.account_name, path);
 		}
 		if (source.value === 's3' && options.bucketRegion) body.bucket_region = options.bucketRegion;
 	} else {
 		if (source.value === 'sharepoint') {
-			body.site_url = (this.getNodeParameter('siteUrl', i) as string).trim();
-			if (options.driveId) body.drive_id = options.driveId;
+			body.site_url = locatorValue.call(this, 'siteUrl', i);
+			const driveId = collectionFilter(options.driveId);
+			if (driveId) body.drive_id = driveId;
 		}
-		if (source.value === 'onedrive')
-			body.user_email = (this.getNodeParameter('userEmail', i) as string).trim();
+		if (source.value === 'onedrive') body.user_email = locatorValue.call(this, 'userEmail', i);
 		if (source.value === 'gdrive') {
 			if (options.subjectEmail) body.subject_email = options.subjectEmail;
 			if (!body.subject_email) {
@@ -222,15 +237,11 @@ async function indexFromSource(
 			}
 		}
 		if (source.value === 'dropbox') {
-			if (scope === 'folder')
-				body.directory_path = (this.getNodeParameter('folderPath', i) as string).trim();
-			if (scope === 'file')
-				body.file_path = (this.getNodeParameter('filePath', i) as string).trim();
+			if (scope === 'folder') body.directory_path = locatorValue.call(this, 'folderPath', i);
+			if (scope === 'file') body.file_path = locatorValue.call(this, 'filePath', i);
 		} else {
-			if (scope === 'folder')
-				body[source.folderKey!] = (this.getNodeParameter('folderId', i) as string).trim();
-			if (scope === 'file')
-				body[source.fileKey!] = (this.getNodeParameter('fileId', i) as string).trim();
+			if (scope === 'folder') body[source.folderKey!] = locatorValue.call(this, 'folderId', i);
+			if (scope === 'file') body[source.fileKey!] = locatorValue.call(this, 'fileId', i);
 		}
 	}
 	const suffix = scope === 'all' ? '' : scope === 'folder' ? '/directory' : `/${scope}`;
@@ -329,7 +340,10 @@ async function runIndex(
 				...(urls.length === 1 ? { url: urls[0] } : { urls }),
 				mode,
 				...dropEmpty({
-					languages: list(options.languages),
+					languages: (Array.isArray(options.languages)
+						? (options.languages as string[])
+						: list(options.languages)
+					).filter((l) => l !== 'auto'),
 					on_missing_transcript: mode === 'transcript' ? options.onMissingTranscript : undefined,
 				}),
 				...commonIndexBody(options),
@@ -423,13 +437,91 @@ function shapeResult(
 	return simplifyResult(r, collection);
 }
 
-function searchBody(this: IExecuteFunctions, i: number): IDataObject {
+/** How each custom metadata field is stored in a collection, sampled from its documents. */
+async function metadataTypes(
+	this: IExecuteFunctions,
+	collection: string,
+	i: number,
+): Promise<Record<string, string>> {
+	const page = (await apiRequest.call(
+		this,
+		'GET',
+		`/v3/collections/${encodeURIComponent(collection)}/documents`,
+		undefined,
+		{ include_custom_metadata: true, limit: 200 },
+		{},
+		i,
+	)) as IDataObject;
+	const types: Record<string, string> = {};
+	for (const doc of (page.documents as IDataObject[] | undefined) ?? []) {
+		for (const [key, value] of Object.entries((doc.custom_metadata ?? {}) as IDataObject)) {
+			types[key] ??= Array.isArray(value) ? 'array' : typeof value;
+		}
+	}
+	return types;
+}
+
+/** Turn the builder's text value into the type the field is stored as, so "2024" matches 2024. */
+function typedValue(raw: unknown, type: string | undefined, operator: string): unknown {
+	if (typeof raw !== 'string') return raw;
+	const text = raw.trim();
+	const numeric = /^-?\d+(\.\d+)?$/.test(text);
+	const range = ['$gt', '$gte', '$lt', '$lte'].includes(operator);
+	if ((type === 'number' || (range && type === undefined)) && numeric) return Number(text);
+	if (type === 'boolean' && /^(true|false)$/i.test(text)) return text.toLowerCase() === 'true';
+	return text;
+}
+
+/** The API filter from the Metadata Filters builder plus the Advanced Filter (JSON), joined with AND. */
+async function buildMetadataFilter(
+	this: IExecuteFunctions,
+	options: IDataObject,
+	jsonKey: string,
+	collection: string,
+	i: number,
+): Promise<IDataObject | undefined> {
+	const conditions =
+		((options.metadataFilters as IDataObject | undefined)?.conditions as
+			| IDataObject[]
+			| undefined) ?? [];
+	const parts: IDataObject[] = [];
+	if (conditions.length) {
+		const types = collection ? await metadataTypes.call(this, collection, i) : {};
+		for (const c of conditions) {
+			const field = String(c.field ?? '').trim();
+			if (!field) continue;
+			const operator = String(c.operator ?? '$eq');
+			const type = types[field];
+			const value = ['$in', '$nin'].includes(operator)
+				? list(c.value).map((v) => typedValue(v, type, '$eq'))
+				: typedValue(c.value, type, operator);
+			parts.push({ [field]: { [operator]: value } });
+		}
+	}
+	const json = parseJsonParameter.call(this, options[jsonKey], 'Advanced Filter (JSON)', i) as
+		| IDataObject
+		| undefined;
+	const built =
+		parts.length > 1
+			? { [String(options.metadataMatch ?? '$and')]: parts }
+			: parts.length === 1
+				? parts[0]
+				: undefined;
+	if (built && json) return { $and: [built, json] };
+	return built ?? json;
+}
+
+async function searchBody(
+	this: IExecuteFunctions,
+	i: number,
+	collection: string,
+): Promise<IDataObject> {
 	const options = this.getNodeParameter('options', i, {}) as IDataObject;
 	const include: IDataObject = {};
 	for (const key of (options.include as string[] | undefined) ?? []) include[key] = true;
 	return dropEmpty({
 		limit: this.getNodeParameter('maxResults', i),
-		filter: parseJsonParameter.call(this, options.filter, 'Metadata Filter (JSON)', i),
+		filter: await buildMetadataFilter.call(this, options, 'filter', collection, i),
 		rerank: options.rerank,
 		semantic_ratio: options.semanticRatio,
 		max_chunks_per_document: options.maxChunksPerDocument,
@@ -449,7 +541,7 @@ async function runSearch(this: IExecuteFunctions, operation: string, i: number):
 			this,
 			'POST',
 			`/v3/collections/${name}/query`,
-			{ query, ...searchBody.call(this, i) },
+			{ query, ...(await searchBody.call(this, i, decodeURIComponent(name))) },
 			{},
 			{},
 			i,
@@ -467,28 +559,178 @@ async function runSearch(this: IExecuteFunctions, operation: string, i: number):
 			{ itemIndex: i, description: "Pick between 1 and 10 collections in 'Collections'" },
 		);
 	}
-	const shared = searchBody.call(this, i);
+	// Each collection gets its own body, so filter values are typed as that collection stores them.
+	const bodies = await Promise.all(names.map((name) => searchBody.call(this, i, name)));
 	const response = (await apiRequest.call(
 		this,
 		'POST',
 		'/v3/collections/batch-query',
-		{ query, collections: names.map((collection) => ({ collection, ...shared })) },
+		{ query, collections: names.map((collection, n) => ({ collection, ...bodies[n] })) },
 		{},
 		{},
 		i,
 	)) as IDataObject;
-	const out: IDataObject[] = [];
-	for (const entry of (response.results as IDataObject[] | undefined) ?? []) {
-		const collection = String(entry.collection);
-		if (entry.status !== 'succeeded' && entry.error) {
-			out.push({ collection, status: entry.status, error: entry.error });
-			continue;
-		}
-		for (const r of (entry.results as IDataObject[] | undefined) ?? []) {
-			out.push(shapeResult(r, output, fields, collection));
+	const { items, missing, failures } = batchResults(response, output, fields);
+	// A collection rejected for a field it doesn't have: drop that field's conditions as if no
+	// document has it, and ask that collection again. "Any condition" filters can still match there.
+	for (const m of missing) {
+		// Match by name in case the API ever reorders its results.
+		const body = bodies[names.indexOf(m.collection)] ?? bodies[m.index];
+		let field = m.field;
+		let filter = body.filter as IDataObject | undefined;
+		for (let attempt = 0; attempt < 10; attempt++) {
+			const reduced = filter ? withoutField(filter, field) : true;
+			if (reduced === null) {
+				failures.push({ collection: m.collection, message: m.message });
+				break;
+			}
+			if (reduced === false) break;
+			filter = reduced === true ? undefined : reduced;
+			try {
+				const single = (await apiRequest.call(
+					this,
+					'POST',
+					`/v3/collections/${encodeURIComponent(m.collection)}/query`,
+					dropEmpty({ query, ...body, filter }),
+					{},
+					{},
+					i,
+				)) as IDataObject;
+				for (const r of (single.results as IDataObject[] | undefined) ?? []) {
+					items.push(shapeResult(r, output, fields, m.collection));
+				}
+				break;
+			} catch (error) {
+				const text = `${(error as Error).message} ${String((error as { description?: string }).description ?? '')}`;
+				const next = missingField(text);
+				if (!next) {
+					failures.push({ collection: m.collection, message: (error as Error).message });
+					break;
+				}
+				field = next;
+			}
 		}
 	}
-	return out;
+	if (failures.length) {
+		throw new NodeOperationError(
+			this.getNode(),
+			`Search failed in ${failures.map((f) => `'${f.collection}'`).join(', ')}: ${failures[0].message}`,
+			{
+				itemIndex: i,
+				description:
+					"No results were returned. Fix the collection, or remove it from 'Collections' and run again.",
+			},
+		);
+	}
+	return items;
+}
+
+/** The field named in the API's "not a filterable attribute" error, if that is the error. */
+export function missingField(message: string): string | undefined {
+	return /"([^"]+)" is not a filterable attribute/.exec(message)?.[1];
+}
+
+/**
+ * Whether a document without the field passes one operator, read as the search index reads a
+ * missing value: as null (checked on staging). $eq null matches it, $ne null doesn't, and $ne or
+ * $nin with any other value does. The index rejects null inside $in and $nin lists, and a
+ * comparison against null means nothing, so those return null and the error stays visible.
+ */
+function absentMatches(op: string, operand: unknown): boolean | null {
+	const hasNull = Array.isArray(operand) && operand.includes(null);
+	switch (op) {
+		case '$eq':
+			return operand === null;
+		case '$ne':
+			return operand !== null;
+		case '$in':
+			return hasNull ? null : false;
+		case '$nin':
+			return hasNull ? null : true;
+		case '$exists':
+			return !operand;
+		case '$gt':
+		case '$gte':
+		case '$lt':
+		case '$lte':
+			return operand === null ? null : false;
+		default:
+			return null;
+	}
+}
+
+/**
+ * The filter as it applies to documents that don't have `field`: true matches every document,
+ * false matches none, and null means an operator this can't reason about, so the caller keeps the
+ * collection's error visible rather than guess.
+ */
+export function withoutField(filter: unknown, field: string): IDataObject | boolean | null {
+	if (!filter || typeof filter !== 'object' || Array.isArray(filter)) return null;
+	const parts: Array<IDataObject | boolean | null> = [];
+	for (const [key, value] of Object.entries(filter as IDataObject)) {
+		if (key === '$and' || key === '$or') {
+			if (!Array.isArray(value)) return null;
+			const children = value.map((c) => withoutField(c, field));
+			if (children.includes(null)) return null;
+			const any = key === '$or';
+			if (children.includes(any)) {
+				parts.push(any);
+				continue;
+			}
+			const rest = children.filter((c) => typeof c === 'object') as IDataObject[];
+			parts.push(rest.length === 0 ? !any : rest.length === 1 ? rest[0] : { [key]: rest });
+		} else if (key.startsWith('$')) {
+			return null;
+		} else if (key !== field) {
+			parts.push({ [key]: value } as IDataObject);
+		} else if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+			parts.push(absentMatches('$eq', value)); // {"field": value} is shorthand for $eq
+		} else {
+			for (const [op, operand] of Object.entries(value as IDataObject)) {
+				parts.push(absentMatches(op, operand));
+			}
+		}
+	}
+	// Several keys in one object are all required.
+	if (parts.includes(null)) return null;
+	if (parts.includes(false)) return false;
+	const rest = parts.filter((p) => typeof p === 'object') as IDataObject[];
+	if (rest.length === 0) return true;
+	return rest.length === 1 ? rest[0] : { $and: rest };
+}
+
+/**
+ * Passages from a batch query, one item each. Collections the API rejected for a field they
+ * don't have come back in `missing`, so the caller can retry them; other failures in `failures`.
+ */
+export function batchResults(
+	response: IDataObject,
+	output: string,
+	fields: string[],
+): {
+	items: IDataObject[];
+	missing: Array<{ index: number; collection: string; field: string; message: string }>;
+	failures: Array<{ collection: string; message: string }>;
+} {
+	const items: IDataObject[] = [];
+	const missing: Array<{ index: number; collection: string; field: string; message: string }> = [];
+	const failures: Array<{ collection: string; message: string }> = [];
+	const entries = (response.results as IDataObject[] | undefined) ?? [];
+	entries.forEach((entry, index) => {
+		const collection = String(entry.collection);
+		if (entry.status !== 'succeeded' && entry.error) {
+			const error = entry.error as IDataObject;
+			const message = String(error.message ?? error.detail ?? entry.status);
+			const field = missingField(message);
+			if (field) missing.push({ index, collection, field, message });
+			else failures.push({ collection, message });
+			return;
+		}
+		for (const r of (entry.results as IDataObject[] | undefined) ?? []) {
+			items.push(shapeResult(r, output, fields, collection));
+		}
+	});
+	return { items, missing, failures };
 }
 
 async function runDocument(this: IExecuteFunctions, operation: string, i: number): Promise<Result> {
@@ -500,10 +742,11 @@ async function runDocument(this: IExecuteFunctions, operation: string, i: number
 
 	switch (operation) {
 		case 'getMany': {
-			const filter = parseJsonParameter.call(
+			const filter = await buildMetadataFilter.call(
 				this,
-				options.metadataFilter,
-				'Metadata Filter (JSON)',
+				options,
+				'metadataFilter',
+				decodeURIComponent(collection),
 				i,
 			);
 			return apiRequestAllItems.call(
@@ -774,9 +1017,12 @@ async function runSync(this: IExecuteFunctions, operation: string, i: number): P
 	if (storage) {
 		const options = this.getNodeParameter('options', i, {}) as IDataObject;
 		const auth = await storageAuth.call(this, storage.credential, 'sync');
-		const bucket = (this.getNodeParameter('bucket', i) as string).trim();
+		const bucket = locatorValue.call(this, 'bucket', i);
 		const body: IDataObject = {
-			...syncSettings({ ...options, prefix: this.getNodeParameter('prefix', i, '') }),
+			...syncSettings({
+				...options,
+				prefix: String(this.getNodeParameter('prefix', i, '', { extractValue: true }) ?? ''),
+			}),
 			processing_type: this.getNodeParameter('processingType', i),
 		};
 		if (storage.path === 'azure') {

@@ -1,4 +1,12 @@
-import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	ICredentialDataDecryptedObject,
+	Icon,
+	ICredentialType,
+	IHttpRequestOptions,
+	INodeProperties,
+} from 'n8n-workflow';
+
+import { regionFromHost, sigV4Headers } from '../nodes/CaptainFileSearch/storage/signing';
 
 export class CaptainCloudflareR2Api implements ICredentialType {
 	name = 'captainCloudflareR2Api';
@@ -48,4 +56,26 @@ export class CaptainCloudflareR2Api implements ICredentialType {
 			description: 'Must match the jurisdiction the bucket was created in',
 		},
 	];
+
+	/** Signs bucket and file listing requests (SigV4). Indexing requests go to File Search, not here. */
+	async authenticate(
+		credentials: ICredentialDataDecryptedObject,
+		requestOptions: IHttpRequestOptions,
+	): Promise<IHttpRequestOptions> {
+		const url = String(requestOptions.url);
+		const host = new URL(url).host;
+		return {
+			...requestOptions,
+			headers: {
+				...requestOptions.headers,
+				...sigV4Headers(
+					String(requestOptions.method ?? 'GET'),
+					url,
+					regionFromHost(host, 'auto'),
+					String(credentials.accessKeyId),
+					String(credentials.secretAccessKey),
+				),
+			},
+		};
+	}
 }

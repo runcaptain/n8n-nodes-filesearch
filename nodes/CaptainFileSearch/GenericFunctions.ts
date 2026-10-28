@@ -475,3 +475,61 @@ export async function searchSyncs(
 			.map((s) => ({ name: label(s), value: String(s.sync_id) })),
 	};
 }
+
+/** How many documents the Field dropdown reads to find metadata fields. */
+export const METADATA_SCAN_LIMIT = 10000;
+
+/** Custom metadata fields that exist in the chosen collection, for the filter builder's Field dropdown. */
+export async function getMetadataFields(
+	this: ILoadOptionsFunctions,
+): Promise<INodePropertyOptions[]> {
+	// Only one of the two collection fields exists on a given action, and n8n throws when asked
+	// for a parameter the action doesn't have.
+	const read = (name: string, options?: { extractValue: boolean }) => {
+		try {
+			return this.getCurrentNodeParameter(name, options);
+		} catch {
+			return undefined;
+		}
+	};
+	const picked = read('collection', { extractValue: true });
+	const many = read('collections') as string[] | string | undefined;
+	const collections = (
+		picked ? [picked] : Array.isArray(many) ? many : String(many ?? '').split(',')
+	)
+		.map((c) => String(c ?? '').trim())
+		.filter(Boolean);
+	if (!collections.length) return [];
+	// Fields can appear in any document of any chosen collection, so read every page up to a cap
+	// that keeps the dropdown fast. Past the cap, the Field's expression mode takes any field name.
+	const fields = new Map<string, unknown>();
+	const pageSize = 1000;
+	let scanned = 0;
+	for (const collection of collections) {
+		for (let offset = 0; scanned < METADATA_SCAN_LIMIT; offset += pageSize) {
+			const page = (await apiRequest.call(
+				this,
+				'GET',
+				`/v3/collections/${encodeURIComponent(collection)}/documents`,
+				undefined,
+				{ include_custom_metadata: true, limit: pageSize, offset },
+			)) as IDataObject;
+			const docs = (page.documents as IDataObject[] | undefined) ?? [];
+			for (const doc of docs) {
+				for (const [key, value] of Object.entries((doc.custom_metadata ?? {}) as IDataObject)) {
+					if (!fields.has(key)) fields.set(key, value);
+				}
+			}
+			scanned += docs.length;
+			const total = Number(page.total_count ?? 0);
+			if (docs.length < pageSize || (total && offset + docs.length >= total)) break;
+		}
+	}
+	return [...fields.entries()]
+		.sort(([a], [b]) => a.localeCompare(b))
+		.map(([key, example]) => ({
+			name: key,
+			value: key,
+			description: `Example value: ${JSON.stringify(example).slice(0, 60)}`,
+		}));
+}

@@ -1,4 +1,12 @@
-import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	ICredentialDataDecryptedObject,
+	Icon,
+	ICredentialType,
+	IHttpRequestOptions,
+	INodeProperties,
+} from 'n8n-workflow';
+
+import { azureSharedKeyHeaders } from '../nodes/CaptainFileSearch/storage/signing';
 
 export class CaptainAzureBlobApi implements ICredentialType {
 	name = 'captainAzureBlobApi';
@@ -27,4 +35,22 @@ export class CaptainAzureBlobApi implements ICredentialType {
 			description: 'Key1 or key2 from the storage account Access Keys page',
 		},
 	];
+
+	/** Signs container and blob listing requests (Shared Key). Indexing requests go to File Search, not here. */
+	async authenticate(
+		credentials: ICredentialDataDecryptedObject,
+		requestOptions: IHttpRequestOptions,
+	): Promise<IHttpRequestOptions> {
+		return {
+			...requestOptions,
+			headers: {
+				...requestOptions.headers,
+				...azureSharedKeyHeaders(
+					String(requestOptions.url),
+					String(credentials.accountName),
+					String(credentials.accountKey),
+				),
+			},
+		};
+	}
 }

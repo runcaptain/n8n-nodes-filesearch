@@ -4,6 +4,7 @@ import {
 	collectionLocator,
 	customMetadataOption,
 	idLocator,
+	pickerLocator,
 	processingTypeField,
 	simplifyField,
 } from './shared';
@@ -179,31 +180,32 @@ const patternsAndPolicy: INodeProperties[] = [
 
 export const syncFields: INodeProperties[] = [
 	collectionLocator(createShow, { description: 'The collection the sync keeps up to date' }),
-	{
-		displayName: 'Bucket Name',
+	pickerLocator({
 		name: 'bucket',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { ...show, operation: CREATE_OPS.filter((o) => o !== 'sync_azure') } },
-	},
-	{
-		displayName: 'Container Name',
+		displayName: 'Bucket',
+		searchListMethod: 'searchBuckets',
+		show: { ...show, operation: CREATE_OPS.filter((o) => o !== 'sync_azure') },
+		description: 'The bucket to keep in sync. Listing S3 buckets needs an access key credential.',
+		typed: [{ name: 'name', displayName: 'By Name', placeholder: 'e.g. my-company-docs' }],
+	}),
+	pickerLocator({
 		name: 'bucket',
-		type: 'string',
-		required: true,
-		default: '',
-		displayOptions: { show: { ...show, operation: ['sync_azure'] } },
-	},
-	{
-		displayName: 'Folder Prefix',
+		displayName: 'Container',
+		searchListMethod: 'searchBuckets',
+		show: { ...show, operation: ['sync_azure'] },
+		description: 'The container to keep in sync',
+		typed: [{ name: 'name', displayName: 'By Name', placeholder: 'e.g. documents' }],
+	}),
+	pickerLocator({
 		name: 'prefix',
-		type: 'string',
-		default: '',
-		placeholder: 'e.g. docs/2024/',
-		description: 'Only sync files under this prefix. Leave empty for the whole bucket.',
-		displayOptions: { show: createShow },
-	},
+		displayName: 'Folder',
+		searchListMethod: 'searchFolders',
+		show: createShow,
+		description:
+			'Only sync files under this folder. Leave empty for the whole bucket. Type a path to narrow the list.',
+		typed: [{ name: 'path', displayName: 'By Path', placeholder: 'e.g. docs/2024/' }],
+		required: false,
+	}),
 	processingTypeField(createShow),
 	{
 		displayName: 'Options',

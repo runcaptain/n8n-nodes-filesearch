@@ -1,6 +1,6 @@
 import type { INodeProperties } from 'n8n-workflow';
 
-import { collectionLocator, idLocator, simplifyField } from './shared';
+import { collectionLocator, idLocator, metadataFilterOptions, simplifyField } from './shared';
 
 export const documentOperations: INodeProperties[] = [
 	{
@@ -132,6 +132,7 @@ export const documentFields: INodeProperties[] = [
 		default: {},
 		displayOptions: { show: { ...show, operation: ['getMany'] } },
 		options: [
+			...metadataFilterOptions,
 			{
 				displayName: 'Include Custom Metadata',
 				name: 'includeCustomMetadata',
@@ -140,13 +141,14 @@ export const documentFields: INodeProperties[] = [
 				description: "Whether to return each document's custom metadata",
 			},
 			{
-				displayName: 'Metadata Filter (JSON)',
+				displayName: 'Advanced Filter (JSON)',
 				name: 'metadataFilter',
 				type: 'json',
 				default: '{}',
 				placeholder: 'e.g. {"department": {"$eq": "legal"}}',
 				hint: 'e.g. {"department": {"$eq": "legal"}}',
-				description: 'Only list documents whose custom metadata match',
+				description:
+					"For nested conditions the builder can't express. Combined with Metadata Filters using AND.",
 			},
 		],
 	},

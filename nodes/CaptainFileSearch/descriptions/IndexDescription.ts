@@ -6,11 +6,13 @@ import {
 	ifExistsOption,
 	maskPiiOptions,
 	parsingScriptOption,
+	pickerLocator,
 	processingTypeField,
 	simplifyField,
 	transcriptionLanguageOption,
 	waitFields,
 } from './shared';
+import { AWS_REGIONS, CAPTION_LANGUAGES } from '../storage/lists';
 
 export type Scope = 'all' | 'folder' | 'file' | 'manifest';
 
@@ -274,41 +276,70 @@ function sourceFields(source: SourceConfig): INodeProperties[] {
 	const at = (scope: Scope[]) => ({ show: { ...show, scope } });
 	const fields: INodeProperties[] = [];
 
+	const DRIVE_FOLDER_URL =
+		'https:\\/\\/drive\\.google\\.com\\/drive\\/(?:u\\/\\d+\\/)?folders\\/([\\w-]+)';
+	const DRIVE_FILE_URL =
+		'https:\\/\\/(?:drive|docs)\\.google\\.com\\/(?:file|document|spreadsheets|presentation)\\/d\\/([\\w-]+)';
+	const pathHint = 'Type a path to narrow the list, e.g. reports/ shows what is inside reports.';
+
 	if (source.value === 'sharepoint') {
-		fields.push({
-			displayName: 'Site URL',
-			name: 'siteUrl',
-			type: 'string',
-			required: true,
-			default: '',
-			placeholder: 'e.g. https://contoso.sharepoint.com/sites/Sales',
-			description: 'The SharePoint site URL, or a Microsoft Graph site ID',
-			displayOptions: { show },
-		});
+		fields.push(
+			pickerLocator({
+				name: 'siteUrl',
+				displayName: 'Site',
+				searchListMethod: 'searchSharePointSites',
+				show,
+				description: 'The SharePoint site to index',
+				typed: [
+					{
+						name: 'url',
+						displayName: 'By URL',
+						placeholder: 'e.g. https://contoso.sharepoint.com/sites/Sales',
+						extract: '(https?:\\/\\/\\S+)',
+					},
+					{
+						name: 'id',
+						displayName: 'By ID',
+						placeholder: 'e.g. contoso.sharepoint.com,1a2b,3c4d',
+					},
+				],
+			}),
+		);
 	}
 	if (source.value === 'onedrive') {
-		fields.push({
-			displayName: 'User Email',
-			name: 'userEmail',
-			type: 'string',
-			required: true,
-			default: '',
-			placeholder: 'e.g. name@contoso.com',
-			description: 'The OneDrive for Business user whose drive is indexed',
-			displayOptions: { show },
-		});
+		fields.push(
+			pickerLocator({
+				name: 'userEmail',
+				displayName: 'User',
+				searchListMethod: 'searchMicrosoftUsers',
+				show,
+				description:
+					'The person whose OneDrive is indexed. Listing users needs the User.Read.All permission.',
+				typed: [{ name: 'email', displayName: 'By Email', placeholder: 'e.g. nathan@contoso.com' }],
+			}),
+		);
 	}
 	if (source.kind === 'bucket') {
 		const noun = source.value === 'azure' ? 'Container' : 'Bucket';
-		fields.push({
-			displayName: `${noun} Name`,
-			name: 'bucketName',
-			type: 'string',
-			required: true,
-			default: '',
-			placeholder: source.value === 'azure' ? 'e.g. documents' : 'e.g. my-company-docs',
-			displayOptions: { show },
-		});
+		fields.push(
+			pickerLocator({
+				name: 'bucketName',
+				displayName: noun,
+				searchListMethod: 'searchBuckets',
+				show,
+				description:
+					source.value === 's3'
+						? 'Listing needs an access key credential. With an IAM role, use By Name.'
+						: `The ${noun.toLowerCase()} to index`,
+				typed: [
+					{
+						name: 'name',
+						displayName: 'By Name',
+						placeholder: source.value === 'azure' ? 'e.g. documents' : 'e.g. my-company-docs',
+					},
+				],
+			}),
+		);
 	}
 
 	fields.push({
@@ -323,84 +354,113 @@ function sourceFields(source: SourceConfig): INodeProperties[] {
 
 	if (source.kind === 'bucket') {
 		fields.push(
-			{
-				displayName: 'Folder Path',
+			pickerLocator({
 				name: 'folderPath',
-				type: 'string',
-				required: true,
-				default: '',
-				placeholder: 'e.g. reports/2024/',
-				description: 'Path inside the bucket. Every file under it is indexed.',
-				displayOptions: at(['folder']),
-			},
-			{
-				displayName: 'File Path',
+				displayName: 'Folder',
+				searchListMethod: 'searchFolders',
+				show: at(['folder']).show,
+				description: `Every file under this folder is indexed. ${pathHint}`,
+				typed: [{ name: 'path', displayName: 'By Path', placeholder: 'e.g. reports/2024/' }],
+			}),
+			pickerLocator({
 				name: 'filePath',
-				type: 'string',
-				required: true,
-				default: '',
-				placeholder: 'e.g. reports/2024/q3-review.pdf',
-				description:
-					'Path of the file inside the bucket. A full URI such as s3://bucket/key also works.',
-				displayOptions: at(['file']),
-			},
-			{
-				displayName: 'Manifest Path',
+				displayName: 'File',
+				searchListMethod: 'searchFiles',
+				show: at(['file']).show,
+				description: pathHint,
+				typed: [
+					{ name: 'path', displayName: 'By Path', placeholder: 'e.g. reports/2024/q3-review.pdf' },
+				],
+			}),
+			pickerLocator({
 				name: 'manifestUri',
-				type: 'string',
-				required: true,
-				default: '',
-				placeholder: source.manifestExample,
+				displayName: 'Manifest',
+				searchListMethod: 'searchManifests',
+				show: at(['manifest']).show,
 				description:
-					'Path of a UTF-8 JSON Lines file in the same bucket, with one {"uri": ...} object per line. A full URI also works.',
-				displayOptions: at(['manifest']),
-			},
+					'A UTF-8 JSON Lines file in the same bucket, with one {"uri": ...} object per line. The list shows .jsonl, .ndjson and .json files.',
+				typed: [
+					{ name: 'path', displayName: 'By Path', placeholder: source.manifestExample ?? '' },
+				],
+			}),
 		);
 	} else if (source.value === 'dropbox') {
 		fields.push(
-			{
-				displayName: 'Folder Path',
+			pickerLocator({
 				name: 'folderPath',
-				type: 'string',
-				required: true,
-				default: '',
-				placeholder: 'e.g. /Reports/2024',
-				displayOptions: at(['folder']),
-			},
-			{
-				displayName: 'File Path',
+				displayName: 'Folder',
+				searchListMethod: 'searchDropboxFolders',
+				show: at(['folder']).show,
+				description:
+					'Every file in this folder and its subfolders is indexed. Type to search by name.',
+				typed: [{ name: 'path', displayName: 'By Path', placeholder: 'e.g. /Reports/2024' }],
+			}),
+			pickerLocator({
 				name: 'filePath',
-				type: 'string',
-				required: true,
-				default: '',
-				placeholder: 'e.g. /Reports/annual-review.pdf',
-				displayOptions: at(['file']),
-			},
+				displayName: 'File',
+				searchListMethod: 'searchDropboxFiles',
+				show: at(['file']).show,
+				description: 'Type to search by name',
+				typed: [
+					{ name: 'path', displayName: 'By Path', placeholder: 'e.g. /Reports/annual-review.pdf' },
+				],
+			}),
+		);
+	} else if (source.value === 'gdrive') {
+		fields.push(
+			pickerLocator({
+				name: 'folderId',
+				displayName: 'Folder',
+				searchListMethod: 'searchDriveFolders',
+				show: at(['folder']).show,
+				description:
+					'Every file in this folder and its subfolders is indexed. Type to search by name.',
+				typed: [
+					{
+						name: 'url',
+						displayName: 'By URL',
+						placeholder: 'e.g. https://drive.google.com/drive/folders/1AbCdEf',
+						extract: DRIVE_FOLDER_URL,
+					},
+					{ name: 'id', displayName: 'By ID', placeholder: 'e.g. 1AbCdEfGhIjKlMnOp' },
+				],
+			}),
+			pickerLocator({
+				name: 'fileId',
+				displayName: 'File',
+				searchListMethod: 'searchDriveFiles',
+				show: at(['file']).show,
+				description: 'Type to search by name',
+				typed: [
+					{
+						name: 'url',
+						displayName: 'By URL',
+						placeholder: 'e.g. https://drive.google.com/file/d/1AbCdEf/view',
+						extract: DRIVE_FILE_URL,
+					},
+					{ name: 'id', displayName: 'By ID', placeholder: 'e.g. 1AbCdEfGhIjKlMnOp' },
+				],
+			}),
 		);
 	} else {
-		const idHint =
-			source.value === 'gdrive'
-				? 'the part after /folders/ or /d/ in the Drive URL'
-				: 'a Microsoft Graph driveItem ID';
 		fields.push(
-			{
-				displayName: 'Folder ID',
+			pickerLocator({
 				name: 'folderId',
-				type: 'string',
-				required: true,
-				default: '',
-				description: `ID of the folder, ${idHint}`,
-				displayOptions: at(['folder']),
-			},
-			{
-				displayName: 'File ID',
+				displayName: 'Folder',
+				searchListMethod: 'searchMicrosoftFolders',
+				show: at(['folder']).show,
+				description:
+					'Every file in this folder and its subfolders is indexed. Type to search by name.',
+				typed: [{ name: 'id', displayName: 'By ID', placeholder: 'e.g. 01ABCDEF2GHIJKLMN' }],
+			}),
+			pickerLocator({
 				name: 'fileId',
-				type: 'string',
-				required: true,
-				default: '',
-				description: `ID of the file, ${idHint}`,
-				displayOptions: at(['file']),
-			},
+				displayName: 'File',
+				searchListMethod: 'searchMicrosoftFiles',
+				show: at(['file']).show,
+				description: 'Type to search by name',
+				typed: [{ name: 'id', displayName: 'By ID', placeholder: 'e.g. 01ABCDEF2GHIJKLMN' }],
+			}),
 		);
 	}
 
@@ -411,9 +471,9 @@ function sourceFields(source: SourceConfig): INodeProperties[] {
 		extra.push({
 			displayName: 'Bucket Region',
 			name: 'bucketRegion',
-			type: 'string',
-			default: '',
-			placeholder: 'e.g. us-west-2',
+			type: 'options',
+			options: AWS_REGIONS,
+			default: 'us-east-1',
 			description: 'Overrides the region set in the credential',
 		});
 	}
@@ -428,13 +488,17 @@ function sourceFields(source: SourceConfig): INodeProperties[] {
 		});
 	}
 	if (source.value === 'sharepoint') {
-		extra.push({
-			displayName: 'Document Library ID',
+		const library = pickerLocator({
 			name: 'driveId',
-			type: 'string',
-			default: '',
-			description: 'Graph drive ID of a library other than the default Documents library',
+			displayName: 'Document Library',
+			searchListMethod: 'searchSharePointLibraries',
+			show: {},
+			description: 'A library other than the default Documents library',
+			typed: [{ name: 'id', displayName: 'By ID', placeholder: 'e.g. b!AbCdEf…' }],
+			required: false,
 		});
+		delete library.displayOptions;
+		extra.push(library);
 	}
 	if (source.fileSupportsSourceIdentity) {
 		extra.push({
@@ -596,11 +660,11 @@ const directFields: INodeProperties[] = [
 			{
 				displayName: 'Caption Languages',
 				name: 'languages',
-				type: 'string',
-				default: '',
-				placeholder: 'e.g. en, es',
+				type: 'multiOptions',
+				options: CAPTION_LANGUAGES,
+				default: [],
 				description:
-					'Preferred caption languages in order, as ISO 639-1 codes. Defaults to English.',
+					'Caption languages to use, in order of preference. If the video has none of them, File Search uses the first captions the video does have. Leave empty or choose Any Language to try English first.',
 			},
 			{
 				displayName: 'If No Captions',

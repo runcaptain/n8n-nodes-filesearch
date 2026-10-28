@@ -1,4 +1,17 @@
-import type { Icon, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	ICredentialDataDecryptedObject,
+	Icon,
+	ICredentialType,
+	IHttpRequestOptions,
+	INodeProperties,
+} from 'n8n-workflow';
+
+import {
+	credentialRegion,
+	regionFromHost,
+	sigV4Headers,
+} from '../nodes/CaptainFileSearch/storage/signing';
+import { AWS_REGION_CHOICES } from '../nodes/CaptainFileSearch/storage/lists';
 
 export class CaptainSupabaseStorageApi implements ICredentialType {
 	name = 'captainSupabaseStorageApi';
@@ -15,15 +28,26 @@ export class CaptainSupabaseStorageApi implements ICredentialType {
 			name: 'endpointUrl',
 			type: 'string',
 			default: '',
-			placeholder: 'e.g. https://<project_ref>.storage.supabase.co/storage/v1/s3',
+			placeholder: 'e.g. https://abcdefghijklmnop.storage.supabase.co/storage/v1/s3',
 			required: true,
+			description: "Shown on your project's Storage → S3 Connection page",
 		},
 		{
 			displayName: 'Region',
 			name: 'region',
-			type: 'string',
+			type: 'options',
+			options: AWS_REGION_CHOICES,
 			default: 'us-east-1',
 			description: 'The region shown on the Storage → S3 Connection page',
+		},
+		{
+			displayName: 'Region Code',
+			name: 'customRegion',
+			type: 'string',
+			default: '',
+			required: true,
+			placeholder: 'e.g. ca-west-1',
+			displayOptions: { show: { region: ['other'] } },
 		},
 		{
 			displayName: 'Access Key ID',
@@ -42,4 +66,26 @@ export class CaptainSupabaseStorageApi implements ICredentialType {
 			required: true,
 		},
 	];
+
+	/** Signs bucket and file listing requests (SigV4). Indexing requests go to File Search, not here. */
+	async authenticate(
+		credentials: ICredentialDataDecryptedObject,
+		requestOptions: IHttpRequestOptions,
+	): Promise<IHttpRequestOptions> {
+		const url = String(requestOptions.url);
+		const host = new URL(url).host;
+		return {
+			...requestOptions,
+			headers: {
+				...requestOptions.headers,
+				...sigV4Headers(
+					String(requestOptions.method ?? 'GET'),
+					url,
+					regionFromHost(host, credentialRegion(credentials)),
+					String(credentials.accessKeyId),
+					String(credentials.secretAccessKey),
+				),
+			},
+		};
+	}
 }

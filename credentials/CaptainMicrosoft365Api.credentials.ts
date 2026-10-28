@@ -1,4 +1,13 @@
-import type { Icon, ICredentialTestRequest, ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+	IAuthenticateGeneric,
+	ICredentialDataDecryptedObject,
+	Icon,
+	ICredentialTestRequest,
+	ICredentialType,
+	IDataObject,
+	IHttpRequestHelper,
+	INodeProperties,
+} from 'n8n-workflow';
 
 export class CaptainMicrosoft365Api implements ICredentialType {
 	name = 'captainMicrosoft365Api';
@@ -41,7 +50,47 @@ export class CaptainMicrosoft365Api implements ICredentialType {
 			default: '',
 			required: true,
 		},
+		{
+			displayName: 'Access Token',
+			name: 'accessToken',
+			type: 'hidden',
+			typeOptions: { expirable: true, password: true },
+			default: '',
+		},
 	];
+
+	/** Mints an app-only Microsoft Graph token for listing sites, libraries, users and files in the editor. */
+	async preAuthentication(
+		this: IHttpRequestHelper,
+		credentials: ICredentialDataDecryptedObject,
+	): Promise<IDataObject> {
+		const form = [
+			`client_id=${encodeURIComponent(String(credentials.clientId))}`,
+			`client_secret=${encodeURIComponent(String(credentials.clientSecret))}`,
+			'scope=https%3A%2F%2Fgraph.microsoft.com%2F.default',
+			'grant_type=client_credentials',
+		].join('&');
+		try {
+			const response = (await this.helpers.httpRequest({
+				method: 'POST',
+				url: `https://login.microsoftonline.com/${encodeURIComponent(String(credentials.tenantId))}/oauth2/v2.0/token`,
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body: form,
+			})) as IDataObject;
+			return { accessToken: response.access_token };
+		} catch {
+			throw new Error(
+				'Microsoft did not accept these values. Check the tenant ID and client ID, and that the client secret has not expired.',
+			);
+		}
+	}
+
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			headers: { Authorization: '=Bearer {{$credentials.accessToken}}' },
+		},
+	};
 
 	test: ICredentialTestRequest = {
 		request: {

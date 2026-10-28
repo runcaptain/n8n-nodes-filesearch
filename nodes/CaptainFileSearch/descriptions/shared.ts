@@ -1,5 +1,7 @@
 import type { INodeProperties, INodePropertyOptions } from 'n8n-workflow';
 
+import { TRANSCRIPTION_LANGUAGES } from '../storage/lists';
+
 type Show = NonNullable<NonNullable<INodeProperties['displayOptions']>['show']>;
 
 export function collectionLocator(
@@ -78,6 +80,60 @@ export function simplifyField(show: Show): INodeProperties {
 		default: true,
 		description: 'Whether to return a simplified version of the response instead of the raw data',
 		displayOptions: { show },
+	};
+}
+
+export interface TypedMode {
+	name: 'name' | 'path' | 'id' | 'url' | 'email';
+	displayName: string;
+	placeholder: string;
+	/** For URL modes: the regex whose first group is the value, e.g. an ID inside a link. */
+	extract?: string;
+}
+
+/** A field filled from a list the node loads, with typed modes as the fallback. Defaults to the list. */
+export function pickerLocator(opts: {
+	name: string;
+	displayName: string;
+	searchListMethod: string;
+	show: Show;
+	description: string;
+	typed: TypedMode[];
+	required?: boolean;
+}): INodeProperties {
+	return {
+		displayName: opts.displayName,
+		name: opts.name,
+		type: 'resourceLocator',
+		default: { mode: 'list', value: '' },
+		required: opts.required ?? true,
+		description: opts.description,
+		modes: [
+			{
+				displayName: 'From List',
+				name: 'list',
+				type: 'list',
+				typeOptions: { searchListMethod: opts.searchListMethod, searchable: true },
+			},
+			...opts.typed.map((mode) => ({
+				displayName: mode.displayName,
+				name: mode.name,
+				type: 'string' as const,
+				placeholder: mode.placeholder,
+				...(mode.extract
+					? {
+							extractValue: { type: 'regex' as const, regex: mode.extract },
+							validation: [
+								{
+									type: 'regex' as const,
+									properties: { regex: mode.extract, errorMessage: 'Paste a full link' },
+								},
+							],
+						}
+					: {}),
+			})),
+		],
+		displayOptions: { show: opts.show },
 	};
 }
 
@@ -214,10 +270,10 @@ export const parsingScriptOption: INodeProperties = {
 export const transcriptionLanguageOption: INodeProperties = {
 	displayName: 'Audio Language',
 	name: 'transcriptionLanguage',
-	type: 'string',
+	type: 'options',
+	options: TRANSCRIPTION_LANGUAGES,
 	default: '',
-	placeholder: 'e.g. es-US',
-	description: 'Language code for audio and video. Leave empty to detect it per file.',
+	description: 'Language spoken in audio and video files. Detect Automatically works per file.',
 };
 
 export function waitFields(show: Show): INodeProperties[] {
@@ -243,3 +299,71 @@ export function waitFields(show: Show): INodeProperties[] {
 		},
 	];
 }
+
+/** Metadata filter conditions with a Field dropdown loaded from the collection's own metadata. */
+export const metadataFilterOptions: INodeProperties[] = [
+	{
+		displayName: 'Metadata Filters',
+		name: 'metadataFilters',
+		type: 'fixedCollection',
+		typeOptions: { multipleValues: true },
+		placeholder: 'Add Condition',
+		default: {},
+		description: 'Only include documents whose custom metadata meet these conditions',
+		options: [
+			{
+				displayName: 'Condition',
+				name: 'conditions',
+				values: [
+					{
+						displayName: 'Field Name or ID',
+						name: 'field',
+						type: 'options',
+						typeOptions: {
+							loadOptionsMethod: 'getMetadataFields',
+							loadOptionsDependsOn: ['collection.value', 'collections'],
+						},
+						default: '',
+						description:
+							'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+					},
+					{
+						displayName: 'Operator',
+						name: 'operator',
+						type: 'options',
+						options: [
+							{ name: 'Does Not Equal', value: '$ne' },
+							{ name: 'Equals', value: '$eq' },
+							{ name: 'Greater Than', value: '$gt' },
+							{ name: 'Greater Than or Equal', value: '$gte' },
+							{ name: 'Is Not One Of', value: '$nin' },
+							{ name: 'Is One Of', value: '$in' },
+							{ name: 'Less Than', value: '$lt' },
+							{ name: 'Less Than or Equal', value: '$lte' },
+						],
+						default: '$eq',
+					},
+					{
+						displayName: 'Value',
+						name: 'value',
+						type: 'string',
+						default: '',
+						placeholder: 'e.g. legal',
+						description: 'For Is One Of and Is Not One Of, separate values with commas',
+					},
+				],
+			},
+		],
+	},
+	{
+		displayName: 'Match',
+		name: 'metadataMatch',
+		type: 'options',
+		options: [
+			{ name: 'All Conditions', value: '$and' },
+			{ name: 'Any Condition', value: '$or' },
+		],
+		default: '$and',
+		description: 'Used when there is more than one metadata condition',
+	},
+];
