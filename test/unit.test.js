@@ -209,7 +209,7 @@ function fakeContext(params, handle) {
 		calls,
 		getNode: () => ({
 			name: 'Captain File Search',
-			type: 'n8n-nodes-filesearch.captainFileSearch',
+			type: '@captain-sdk/n8n-nodes-filesearch.captainFileSearch',
 			typeVersion: 1,
 			parameters: {},
 		}),

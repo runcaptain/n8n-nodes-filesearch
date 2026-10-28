@@ -1,4 +1,4 @@
-# Publishes n8n-nodes-filesearch to npm when a version tag (e.g. 0.1.0) is pushed.
+# Publishes @captain-sdk/n8n-nodes-filesearch to npm when a version tag (e.g. 0.1.0) is pushed.
 #
 # n8n requires community nodes to be published from GitHub Actions with npm
 # provenance (from 2026-05-01), and npm only issues provenance for public

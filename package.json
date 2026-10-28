@@ -1,5 +1,5 @@
 {
-	"name": "n8n-nodes-filesearch",
+	"name": "@captain-sdk/n8n-nodes-filesearch",
 	"version": "0.1.0",
 	"description": "n8n nodes for the Captain File Search API: index files from any storage, search collections, and react to indexing jobs.",
 	"license": "MIT",

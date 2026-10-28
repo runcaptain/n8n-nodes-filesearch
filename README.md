@@ -1,4 +1,4 @@
-# n8n-nodes-filesearch
+# @captain-sdk/n8n-nodes-filesearch
 
 n8n nodes for the [Captain File Search API](https://docs.filesearch.dev). Index files from cloud storage, drives, URLs or earlier workflow steps, search them in plain language, read documents back, and start workflows when a job finishes.
 
@@ -9,7 +9,7 @@ The package has two nodes:
 
 ## Installation
 
-In n8n, open **Settings → Community Nodes → Install** and enter `n8n-nodes-filesearch`. See the [n8n guide to community nodes](https://docs.n8n.io/integrations/community-nodes/installation/) for self-hosted setups.
+In n8n, open **Settings → Community Nodes → Install** and enter `@captain-sdk/n8n-nodes-filesearch`. See the [n8n guide to community nodes](https://docs.n8n.io/integrations/community-nodes/installation/) for self-hosted setups.
 
 ## Credentials
 
