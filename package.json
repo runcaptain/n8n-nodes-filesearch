@@ -3,6 +3,9 @@
 	"version": "0.1.0",
 	"description": "n8n nodes for the Captain File Search API: index files from any storage, search collections, and react to indexing jobs.",
 	"license": "MIT",
+	"publishConfig": {
+		"access": "public"
+	},
 	"homepage": "https://docs.filesearch.dev",
 	"keywords": [
 		"n8n-community-node-package",
