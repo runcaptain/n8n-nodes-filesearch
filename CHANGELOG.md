@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1
+
+- Pass n8n's community package scan for verification: operation actions are now in the sentence case n8n requires.
+- Add the MIT LICENSE file.
+
 ## 0.1.0
 
 First release.

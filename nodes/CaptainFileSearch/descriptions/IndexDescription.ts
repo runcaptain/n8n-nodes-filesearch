@@ -180,71 +180,61 @@ export const indexOperations: INodeProperties[] = [
 				name: 'Index Files From Amazon S3',
 				value: 's3',
 				description: 'Index a bucket, folder, file or manifest stored in Amazon S3',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Amazon S3',
+				action: 'Index files from amazon S3',
 			},
 			{
 				name: 'Index Files From Azure Blob Storage',
 				value: 'azure',
 				description: 'Index a container, folder, file or manifest stored in Azure Blob Storage',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Azure Blob Storage',
+				action: 'Index files from azure blob storage',
 			},
 			{
 				name: 'Index Files From Backblaze B2',
 				value: 'backblaze',
 				description: 'Index a bucket, folder, file or manifest stored in Backblaze B2',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Backblaze B2',
+				action: 'Index files from backblaze B2',
 			},
 			{
 				name: 'Index Files From Cloudflare R2',
 				value: 'r2',
 				description: 'Index a bucket, folder, file or manifest stored in Cloudflare R2',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Cloudflare R2',
+				action: 'Index files from cloudflare R2',
 			},
 			{
 				name: 'Index Files From Dropbox',
 				value: 'dropbox',
 				description: 'Index a whole Dropbox, a folder or one file',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Dropbox',
+				action: 'Index files from dropbox',
 			},
 			{
 				name: 'Index Files From Google Cloud Storage',
 				value: 'gcs',
 				description: 'Index a bucket, folder, file or manifest stored in Google Cloud Storage',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Google Cloud Storage',
+				action: 'Index files from google cloud storage',
 			},
 			{
 				name: 'Index Files From Google Drive',
 				value: 'gdrive',
 				description: 'Index a whole Google Drive, a folder or one file',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Google Drive',
+				action: 'Index files from google drive',
 			},
 			{
 				name: 'Index Files From OneDrive',
 				value: 'onedrive',
 				description: 'Index a whole OneDrive, a folder or one file',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from OneDrive',
+				action: 'Index files from onedrive',
 			},
 			{
 				name: 'Index Files From SharePoint',
 				value: 'sharepoint',
 				description: 'Index a whole SharePoint site, a folder or one file',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from SharePoint',
+				action: 'Index files from sharepoint',
 			},
 			{
 				name: 'Index Files From Supabase Storage',
 				value: 'supabase',
 				description: 'Index a bucket, folder, file or manifest stored in Supabase Storage',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index files from Supabase Storage',
+				action: 'Index files from supabase storage',
 			},
 			{
 				name: 'Index Text',
@@ -263,8 +253,7 @@ export const indexOperations: INodeProperties[] = [
 				name: 'Index YouTube Video',
 				value: 'youtube',
 				description: 'Index the transcript, audio or video of YouTube videos',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Index YouTube video',
+				action: 'Index youtube video',
 			},
 		],
 		default: 'file',

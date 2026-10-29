@@ -53,48 +53,42 @@ export const syncOperations: INodeProperties[] = [
 				value: 'sync_s3',
 				description:
 					'Index an Amazon S3 bucket now, then keep the collection in step with new, changed and deleted files',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Create Amazon S3 sync',
+				action: 'Create amazon S3 sync',
 			},
 			{
 				name: 'Create Azure Blob Storage Sync',
 				value: 'sync_azure',
 				description:
 					'Index an Azure Blob Storage container now, then keep the collection in step with new, changed and deleted files',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Create Azure Blob Storage sync',
+				action: 'Create azure blob storage sync',
 			},
 			{
 				name: 'Create Backblaze B2 Sync',
 				value: 'sync_backblaze',
 				description:
 					'Index a Backblaze B2 bucket now, then keep the collection in step with new, changed and deleted files',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Create Backblaze B2 sync',
+				action: 'Create backblaze B2 sync',
 			},
 			{
 				name: 'Create Cloudflare R2 Sync',
 				value: 'sync_r2',
 				description:
 					'Index a Cloudflare R2 bucket now, then keep the collection in step with new, changed and deleted files',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Create Cloudflare R2 sync',
+				action: 'Create cloudflare R2 sync',
 			},
 			{
 				name: 'Create Google Cloud Storage Sync',
 				value: 'sync_gcs',
 				description:
 					'Index a Google Cloud Storage bucket now, then keep the collection in step with new, changed and deleted files',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Create Google Cloud Storage sync',
+				action: 'Create google cloud storage sync',
 			},
 			{
 				name: 'Create Supabase Storage Sync',
 				value: 'sync_supabase',
 				description:
 					'Index a Supabase Storage bucket now, then keep the collection in step with new, changed and deleted files',
-				// eslint-disable-next-line n8n-nodes-base/node-param-operation-option-action-miscased -- product names keep their capitals in sentence case
-				action: 'Create Supabase Storage sync',
+				action: 'Create supabase storage sync',
 			},
 			{
 				name: 'Delete Sync',
