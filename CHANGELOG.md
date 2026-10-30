@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Remove the `subcategories` field from both node codex files, as n8n's verification review requires.
+- Correct the Replace option's description: it re-indexes every matching file already in the collection, not only changed ones.
+
 ## 0.1.1
 
 - Pass n8n's community package scan for verification: operation actions are now in the sentence case n8n requires.

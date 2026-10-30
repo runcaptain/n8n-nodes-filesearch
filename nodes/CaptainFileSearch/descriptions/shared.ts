@@ -215,7 +215,7 @@ export const ifExistsOption: INodeProperties = {
 		{
 			name: 'Replace',
 			value: 'replace',
-			description: 'Re-index changed files and swap them in with no downtime',
+			description: 'Re-index every matching file that is already in the collection and swap it in with no downtime',
 		},
 		{
 			name: 'Index Again',
